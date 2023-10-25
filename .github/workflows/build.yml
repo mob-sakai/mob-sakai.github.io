@@ -37,7 +37,7 @@ jobs:
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.branch }}
-          token: ${{ github.token }}
+          token: ${{ secrets.GH_PAT }}
           path: project
 
       - uses: game-ci/unity-builder@v3
