@@ -29,16 +29,26 @@ jobs:
   unity-build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
       - run: |
+          # git config user.name github-actions
+          # git config user.email github-actions@github.com
           REPO=${{ inputs.repo }}
-          echo "REPOSITORY_NAME=${REPO##*/}" >> $GITHUB_ENV
+          REPO_NAME=${REPO##*/}
+          BUILD_PATH=docs/builds/${REPO_NAME}
+          echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_ENV
+          echo "BUILD_PATH=${BUILD_PATH}" >> $GITHUB_ENV
+          [ -e ${BUILD_PATH} ] && rm -rf ${BUILD_PATH}
 
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.branch }}
           token: ${{ secrets.GH_PAT }}
-          path: project
+          path: unityProject
 
       - uses: game-ci/unity-builder@v3
         env:
@@ -47,13 +57,15 @@ jobs:
           unityVersion: ${{ env.unityVersion }}
           targetPlatform: WebGL
           allowDirtyBuild: true
-          projectPath: project
-          buildsPath: "hogehoge"
-
-      - run: ls -la
-      - run: ls -la project
+          projectPath: unityProject
+          buildsPath: ${{ env.BUILD_PATH }}
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.REPOSITORY_NAME }}
-          path: hogehoge
+          name: ${{ env.REPO_NAME }}
+          path: ${{ env.BUILD_PATH }}
+
+      - run: |
+          git add ${{ env.BUILD_PATH }}
+          git commit -m "build: ${{ env.REPO_NAME }}-${{ env.unityVersion }}"
+          git push origin
