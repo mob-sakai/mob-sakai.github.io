@@ -1,0 +1,58 @@
+# Secrets
+#   UNITY_LICENSE:
+name: build_repo
+
+env:
+  unityVersion: 2022.3.11f1
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+        default: main
+  workflow_dispatch:
+    inputs:
+      repo:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+        default: main
+
+jobs:
+  unity-build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          REPO=${{ inputs.repo }}
+          echo "REPOSITORY_NAME=${REPO##*/}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repo }}
+          token: ${{ github.token }}
+          path: project
+
+      - uses: game-ci/unity-builder@v3
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          unityVersion: ${{ env.unityVersion }}
+          targetPlatform: WebGL
+          allowDirtyBuild: true
+          projectPath: project
+          buildsPath: "hogehoge"
+
+      - run: ls -la
+      - run: ls -la project
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPOSITORY_NAME }}
+          path: hogehoge
