@@ -1,0 +1,91 @@
+# Required secrets
+#   UNITY_LICENSE
+#   UNITY_EMAIL
+#   UNITY_PASSWOARD
+name: 🎮 Build Unity Player
+run-name: 🎮 Build ${{ inputs.repository }}#${{ inputs.ref }} (${{ inputs.unityVersion }})
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: The repository to run the workflow on (e.g. mob-sakai/playground)
+        type: string
+      ref:
+        description: The branch or tag to checkout
+        type: string
+      unityVersion:
+        description: The Unity version to build the player with
+        default: 2022.3.36f1
+        required: true
+        type: string
+      targetPlatforms:
+        description: The target platform for the player (e.g. WebGL, iOS, Android, StandaloneOSX, StandaloneWindows64)
+        default: '["WebGL", "iOS", "Android"]'
+        required: true
+        type: string
+    secrets:
+      UNITY_LICENSE:
+        description: The contents of Unity license file
+        required: true
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: The repository to run the workflow on
+        type: string
+      ref:
+        description: The branch or tag to checkout
+        type: string
+      unityVersion:
+        description: The Unity version to build the player with
+        default: 2022.3.36f1
+        required: true
+        type: string
+      targetPlatforms:
+        description: The target platforms for the player (e.g. WebGL, iOS, Android)
+        default: '["WebGL", "iOS", "Android"]'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: 🎮 Build Player (${{ matrix.targetPlatform }}, ${{ inputs.unityVersion }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        targetPlatform: ${{ fromJson(inputs.targetPlatforms) }}
+    steps:
+      - name: 🚚 Checkout (${{ inputs.repository }}, ${{ inputs.ref }})
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: 📥 Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ inputs.repository }}-${{ inputs.ref }}-${{ inputs.unityVersion }}-${{ matrix.targetPlatform }}-${{ github.sha }}
+          restore-keys: |
+            Library-${{ inputs.repository }}-${{ inputs.ref }}-${{ inputs.unityVersion }}-${{ matrix.targetPlatform }}-
+
+      - name: 🛠️ Build Player
+        uses: game-ci/unity-builder@v4
+        timeout-minutes: 30
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: ${{ inputs.unityVersion }}
+          targetPlatform:  ${{ matrix.targetPlatform }}
+          allowDirtyBuild: true
+
+      - name: 📦 Upload Player
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-${{ matrix.targetPlatform }}
+          path: build/${{ matrix.targetPlatform }}
